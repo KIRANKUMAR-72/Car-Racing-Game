@@ -48,6 +48,22 @@
     .mobile-controls { display: none; }
     .pause-button { position: absolute; z-index: 3; top: 96px; right: 34px; width: 38px; height: 38px; border: 1px solid rgba(143,208,232,.3); background: var(--panel); color: var(--ink); cursor: pointer; font: 700 14px 'DM Mono', monospace; box-shadow: 0 8px 26px rgba(0,0,0,.25); }
     .pause-button:hover { border-color: var(--lime); color: var(--lime); }
+    .setup-screen, .summary-screen { position: absolute; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: rgba(8, 15, 27, .76); backdrop-filter: blur(10px); }
+    .setup-card, .summary-card { width: min(92vw, 360px); background: linear-gradient(135deg, rgba(12,20,33,.94), rgba(10,17,28,.88)); border: 1px solid rgba(143,208,232,.22); box-shadow: 0 18px 60px rgba(0,0,0,.38); padding: 22px 20px 18px; }
+    .setup-heading, .summary-title { font: 900 30px/.9 'Barlow Condensed', sans-serif; letter-spacing: 1px; color: var(--lime); margin: 0 0 8px; text-transform: uppercase; }
+    .setup-sub, .summary-sub { color: #c9d2d8; font-size: 11px; letter-spacing: 1.8px; margin-bottom: 18px; text-transform: uppercase; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; margin-bottom: 7px; color: #a5afb9; font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase; }
+    .field input { width: 100%; height: 44px; border: 1px solid rgba(240,242,230,.24); background: rgba(3,8,14,.6); color: var(--ink); padding: 0 12px; font: 700 16px 'DM Mono', monospace; }
+    .field input:focus { outline: none; border-color: var(--lime); box-shadow: 0 0 0 2px rgba(103,233,255,.15); }
+    .start-button { width: 100%; height: 46px; border: 1px solid rgba(103,233,255,.5); background: linear-gradient(135deg, rgba(103,233,255,.18), rgba(103,233,255,.05)); color: var(--ink); font: 800 15px 'Barlow Condensed', sans-serif; letter-spacing: 1.6px; cursor: pointer; }
+    .start-button:hover { border-color: var(--lime); box-shadow: 0 0 20px rgba(103,233,255,.2); }
+    .hidden { display: none !important; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+    .summary-box { padding: 10px 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); }
+    .summary-box .k { display: block; color: #a5afb9; font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase; }
+    .summary-box .v { display: block; margin-top: 6px; color: var(--ink); font: 800 22px/1 'Barlow Condensed', sans-serif; }
+    .summary-actions { margin-top: 18px; }
     @media (max-width: 640px) {
       .topbar { min-height: 62px; padding: 12px 16px; }
       .brand-mark { width: 29px; height: 29px; }
@@ -74,15 +90,44 @@
 </head>
 <body>
   <canvas id="game" aria-label="Endless car racing game"></canvas>
+  <div class="setup-screen" id="setup-screen">
+    <div class="setup-card">
+      <h1 class="setup-heading">LET'S RACE</h1>
+      <div class="setup-sub">Entry Grid</div>
+      <div class="field">
+        <label for="player-name">Driver name</label>
+        <input id="player-name" maxlength="16" value="PLAYER" />
+      </div>
+      <div class="field">
+        <label for="laps-input">Total laps</label>
+        <input id="laps-input" type="number" min="1" max="10" step="1" value="3" />
+      </div>
+      <button class="start-button" id="start-race">Start Race</button>
+    </div>
+  </div>
+  <div class="summary-screen hidden" id="summary-screen">
+    <div class="summary-card">
+      <h2 class="summary-title">Race Complete</h2>
+      <div class="summary-sub" id="summary-driver">Driver</div>
+      <div class="summary-grid">
+        <div class="summary-box"><span class="k">Distance</span><span class="v" id="summary-distance">0.0 km</span></div>
+        <div class="summary-box"><span class="k">Top Speed</span><span class="v" id="summary-top">0 km/h</span></div>
+        <div class="summary-box"><span class="k">Avg Speed</span><span class="v" id="summary-average">0 km/h</span></div>
+        <div class="summary-box"><span class="k">Overtakes</span><span class="v" id="summary-passed">00</span></div>
+      </div>
+      <div class="summary-actions"><button class="start-button" id="restart-race">Race Again</button></div>
+    </div>
+  </div>
   <header class="topbar">
     <div class="brand"><div class="brand-mark">L</div><div><div class="brand-name">LAST <span>LAP</span></div><div class="brand-sub">ENDLESS GRAND PRIX</div></div></div>
-    <div class="race-tag"><i></i>INFINITE CIRCUIT</div>
+    <div class="race-tag"><i></i><span id="player-name-hud">PLAYER</span></div>
   </header>
   <aside class="hud">
     <div class="label">CURRENT SPEED</div>
     <div class="speed-row"><span id="speed">180</span><span class="unit">KM/H</span></div>
     <div class="hud-rule"></div>
     <div class="stat-row"><span class="label">DISTANCE</span><span class="stat-value" id="distance">0.0 km</span></div>
+    <div class="stat-row"><span class="label">LAPS</span><span class="stat-value lime" id="laps">1 / 3</span></div>
     <div class="stat-row"><span class="label">OVERTAKEN</span><span class="stat-value lime" id="passed">00</span></div>
     <div class="boost-wrap"><div class="boost-head"><span>NITRO</span><span id="boost-label">READY</span></div><div class="boost-track"><div id="boost-bar"></div></div></div>
   </aside>
@@ -109,11 +154,28 @@
       const boostBar = document.getElementById('boost-bar');
       const boostLabel = document.getElementById('boost-label');
       const message = document.getElementById('message');
+      const setupScreen = document.getElementById('setup-screen');
+      const summaryScreen = document.getElementById('summary-screen');
+      const playerNameInput = document.getElementById('player-name');
+      const lapsInput = document.getElementById('laps-input');
+      const playerNameHud = document.getElementById('player-name-hud');
+      const lapsReadout = document.getElementById('laps');
+      const summaryDriver = document.getElementById('summary-driver');
+      const summaryDistance = document.getElementById('summary-distance');
+      const summaryTop = document.getElementById('summary-top');
+      const summaryAverage = document.getElementById('summary-average');
+      const summaryPassed = document.getElementById('summary-passed');
       const keys = new Set();
       const buttons = new Set();
       const palette = ['#10bdd5', '#ee4664', '#f0ae48', '#8199ff', '#d8e2ec', '#39c6a3'];
       let width = 0, height = 0, dpr = 1, lastTime = 0, elapsed = 0, shake = 0, flash = 0, cameraPitch = 0;
-      let speed = 340, playerX = 0, distance = 0, overtakes = 0, nitro = 100, paused = false;
+      let speed = 340, playerX = 0, playerY = 0, distance = 0, overtakes = 0, nitro = 100, paused = false;
+      let gameState = 'setup';
+      let lapsTarget = 3;
+      let lapLength = 10000;
+      let maxSpeed = 0;
+      let countdown = 0;
+      let completedLaps = 0;
       const baseViewDistance = 1500;
       let viewDistance = baseViewDistance;
       const racers = [];
@@ -126,8 +188,15 @@
       }
       window.addEventListener('resize', resize);
       resize();
+      function laneChoice(index = 0) {
+        const preferred = [-0.72, 0, 0.72];
+        const base = preferred[(index + Math.floor(Math.random() * preferred.length)) % preferred.length];
+        return base + (Math.random() - 0.5) * 0.24;
+      }
       function makeRacer(index, initial) {
-        return { gap: initial ? 170 + Math.random() * 1180 : 950 + Math.random() * 1000, lane: Math.random() * 1.5 - .75, pace: 250 + Math.random() * 190, color: palette[index % palette.length], wobble: Math.random() * 10 };
+        const lane = laneChoice(index);
+        const gap = initial ? 180 + index * 150 + Math.random() * 80 : 980 + Math.random() * 720;
+        return { gap, lane, pace: 250 + Math.random() * 190, color: palette[index % palette.length], wobble: Math.random() * 10 };
       }
       for (let i = 0; i < 11; i++) racers.push(makeRacer(i, true));
       function trackCenter(worldDistance) {
@@ -229,6 +298,34 @@
           }
         }
       }
+      function drawTrackLine(horizon, ahead, isStart) {
+        const depth = 1 - ahead / viewDistance;
+        if (depth <= 0 || depth > 1) return;
+        const road = projectRoad(ahead, depth);
+        const playerRoadY = playerY + Math.min(78, Math.max(55, width * .075)) * .6;
+        const y = horizon + depth * depth * (playerRoadY - horizon);
+        const roadWidth = road.roadWidth * .92;
+        const stripeWidth = Math.max(3, roadWidth / 24);
+        const lineHeight = Math.max(3, depth * 12);
+        const left = road.center - roadWidth / 2;
+        for (let index = 0; index < 24; index++) {
+          ctx.fillStyle = index % 2 === 0 ? '#f4f1eb' : '#0b1117';
+          ctx.fillRect(left + index * stripeWidth, y - lineHeight / 2, stripeWidth + .5, lineHeight);
+        }
+        ctx.fillStyle = '#f4f1eb';
+        ctx.font = `700 ${Math.max(8, depth * 18)}px 'DM Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(isStart ? 'START' : 'FINISH', road.center, y - lineHeight - Math.max(4, depth * 8));
+      }
+      function drawLapLines(horizon) {
+        const firstMarkerLap = Math.max(0, Math.floor(distance / lapLength));
+        for (let lap = firstMarkerLap; lap <= lapsTarget; lap++) {
+          const markerDistance = lap * lapLength;
+          const ahead = markerDistance - distance;
+          if (ahead > viewDistance) break;
+          if (ahead >= 0) drawTrackLine(horizon, ahead, lap === 0);
+        }
+      }
       function drawMotionLines(horizon) {
         if (speed < 135) return;
         const opacity = Math.min(.42, (speed - 125) / 600);
@@ -306,10 +403,11 @@
         const baseHorizon = height * (width < 640 ? .34 : .38);
         const speedPitch = (340 - speed) / 360;
         const horizon = baseHorizon + speedPitch * height * .028 + cameraPitch * height * .012;
+        playerY = height - Math.max(32, height * .09) - Math.min(44, (speed / 760) * 44) + Math.sin(elapsed * .18) * 4;
         ctx.save(); if (shake > 0) ctx.translate((Math.random()-.5)*shake, (Math.random()-.5)*shake);
-        drawSky(horizon); drawScenery(horizon); drawRoad(horizon); drawMotionLines(horizon); drawRacers(horizon);
+        drawSky(horizon); drawScenery(horizon); drawRoad(horizon); drawLapLines(horizon); drawMotionLines(horizon); drawRacers(horizon);
         const roadBottom = projectRoad(0, 1), carWidth = Math.min(78, Math.max(55, width * .075));
-        drawCar(roadBottom.center + playerX * roadBottom.roadWidth * .40, height - Math.max(28, height * .07), carWidth, carWidth * 1.2, '#ed405e', true, -playerX * .08);
+        drawCar(roadBottom.center + playerX * roadBottom.roadWidth * .40, playerY, carWidth, carWidth * 1.2, '#ed405e', true, -playerX * .08);
         if (flash > 0) { ctx.fillStyle = `rgba(255,94,69,${flash*.2})`; ctx.fillRect(0, 0, width, height); }
         ctx.restore();
       }
@@ -322,42 +420,135 @@
         return name === 'boost' && keys.has(' ');
       }
       function update(dt) {
-        if (paused) return;
+        if (gameState === 'countdown') {
+          countdown -= dt;
+          if (countdown <= -0.5) {
+            gameState = 'playing';
+            message.classList.remove('show');
+            message.innerHTML = '<strong>PAUSED</strong><span>PRESS P OR TAP II TO RESUME</span>';
+            return;
+          }
+          let value = 'GO';
+          if (countdown > 2) value = '3';
+          else if (countdown > 1) value = '2';
+          else if (countdown > 0) value = '1';
+          message.innerHTML = `<strong>${value}</strong><span>${value === 'GO' ? 'LET\'S GO' : 'LET\'S RACE'}</span>`;
+          message.classList.add('show');
+          return;
+        }
+        if (gameState !== 'playing' || paused) return;
         elapsed += dt;
         const boosting = isDown('boost') && nitro > 0, throttle = isDown('throttle'), brake = isDown('brake');
         const steering = (isDown('right') ? 1 : 0) - (isDown('left') ? 1 : 0);
         const previousSpeed = speed;
-        if (throttle || boosting) speed += (boosting ? 280 : 170) * dt;
-        else if (!brake) speed += 38 * dt;
-        if (brake) speed -= 260 * dt;
-        speed = Math.max(65, Math.min(boosting ? 760 : 560, speed));
+
+        let accelerationForce = 0;
+        if (boosting) accelerationForce += 240;
+        if (throttle) accelerationForce += 140;
+        if (!throttle && !boosting) accelerationForce -= 24;
+        if (brake) accelerationForce -= 220;
+
+        speed += accelerationForce * dt;
+        speed = Math.max(90, Math.min(boosting ? 860 : 680, speed));
+        maxSpeed = Math.max(maxSpeed, speed);
+
         const acceleration = dt > 0 ? (speed - previousSpeed) / dt : 0;
         const pitchTarget = Math.max(-1, Math.min(1, acceleration / 140));
         cameraPitch += (pitchTarget - cameraPitch) * (1 - Math.exp(-dt * 5));
         const targetViewDistance = baseViewDistance * Math.max(.42, Math.min(1.16, 360 / speed));
         viewDistance += (targetViewDistance - viewDistance) * (1 - Math.exp(-dt * 2.2));
-        playerX += steering * dt * (1.45 + speed / 220) * (boosting ? .88 : 1);
-        playerX = Math.max(-1.12, Math.min(1.12, playerX));
+        playerX += steering * dt * (0.96 + speed / 320) * (boosting ? .82 : 1);
+        playerX = Math.max(-1.02, Math.min(1.02, playerX));
         distance += speed * dt / 3.6;
         if (boosting) nitro = Math.max(0, nitro - 26 * dt); else nitro = Math.min(100, nitro + 8 * dt);
         for (const racer of racers) {
           racer.gap -= (speed - racer.pace) * dt / 3.6;
-          if (racer.gap < -38) { racer.gap = viewDistance*.65 + Math.random()*viewDistance*.75; racer.lane = Math.random()*1.5-.75; racer.pace = 250+Math.random()*190; racer.color = palette[Math.floor(Math.random()*palette.length)]; overtakes++; }
+          if (racer.gap < -38) {
+            racer.gap = viewDistance * 1.2 + Math.random() * viewDistance * 0.45;
+            racer.lane = laneChoice(Math.floor(Math.random() * 1000));
+            racer.pace = 250 + Math.random() * 190;
+            racer.color = palette[Math.floor(Math.random() * palette.length)];
+            overtakes++;
+          }
           if (racer.gap < 52 && racer.gap > -6 && Math.abs(racer.lane - playerX) < .31 && shake <= 0) { speed = Math.max(70, speed*.59); racer.gap = -42; shake = 13; flash = .8; }
         }
         if (Math.abs(playerX) > .91) { speed = Math.max(65, speed-40*dt); shake = Math.max(shake, 1.5); }
         shake = Math.max(0, shake-27*dt); flash = Math.max(0, flash-1.7*dt);
+
+        completedLaps = Math.min(lapsTarget, Math.floor(distance / lapLength));
+        lapsReadout.textContent = `${completedLaps} / ${lapsTarget}`;
         speedReadout.textContent = Math.round(speed); distanceReadout.textContent = (distance/1000).toFixed(1)+' km';
         passedReadout.textContent = String(overtakes).padStart(2,'0'); boostBar.style.width = nitro+'%';
         boostLabel.textContent = boosting ? 'BURNING' : nitro < 100 ? 'RECHARGING' : 'READY';
+
+        if (distance >= lapLength * lapsTarget) finishRace();
       }
+      function resetRaceState() {
+        speed = 340;
+        playerX = 0;
+        distance = 0;
+        overtakes = 0;
+        nitro = 100;
+        paused = false;
+        elapsed = 0;
+        shake = 0;
+        flash = 0;
+        cameraPitch = 0;
+        maxSpeed = 0;
+        completedLaps = 0;
+        countdown = 3.2;
+        message.classList.remove('show');
+        document.getElementById('pause').textContent = 'Ⅱ';
+        racers.length = 0;
+        for (let i = 0; i < 11; i++) racers.push(makeRacer(i, true));
+        lapsReadout.textContent = `0 / ${lapsTarget}`;
+      }
+
+      function finishRace() {
+        gameState = 'finished';
+        paused = true;
+        summaryDriver.textContent = `${playerNameHud.textContent} • ${lapsTarget} LAPS`;
+        summaryDistance.textContent = (distance / 1000).toFixed(1) + ' km';
+        summaryTop.textContent = `${Math.round(maxSpeed)} km/h`;
+        const avg = distance > 0 ? (distance / (lapsTarget || 1)) * 3.6 : 0;
+        summaryAverage.textContent = `${Math.round(avg)} km/h`;
+        summaryPassed.textContent = String(overtakes).padStart(2, '0');
+        summaryScreen.classList.remove('hidden');
+        message.classList.remove('show');
+      }
+
+      function startRace() {
+        const name = (playerNameInput.value || 'PLAYER').trim().slice(0, 16).toUpperCase();
+        const enteredLaps = Number.parseInt(lapsInput.value || '3', 10);
+        playerNameHud.textContent = name || 'PLAYER';
+        lapsTarget = Number.isFinite(enteredLaps) ? Math.max(1, Math.min(10, enteredLaps)) : 3;
+        lapLength = 10000;
+        gameState = 'countdown';
+        paused = false;
+        setupScreen.classList.add('hidden');
+        summaryScreen.classList.add('hidden');
+        resetRaceState();
+        lapsReadout.textContent = `0 / ${lapsTarget}`;
+        message.innerHTML = '<strong>3</strong><span>LET\'S RACE</span>';
+        message.classList.add('show');
+      }
+
       function frame(time) {
         const dt = Math.min((time-(lastTime||time))/1000,.05); lastTime = time;
         update(dt); render(); requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
-      function togglePause() { paused = !paused; message.classList.toggle('show',paused); document.getElementById('pause').textContent = paused ? '▶' : 'Ⅱ'; }
+      function togglePause() {
+        if (gameState !== 'playing') return;
+        paused = !paused; message.classList.toggle('show',paused); document.getElementById('pause').textContent = paused ? '▶' : 'Ⅱ';
+      }
       document.getElementById('pause').addEventListener('click',togglePause);
+      document.getElementById('start-race').addEventListener('click', startRace);
+      document.getElementById('restart-race').addEventListener('click', () => {
+        setupScreen.classList.remove('hidden');
+        summaryScreen.classList.add('hidden');
+        playerNameInput.focus();
+      });
       window.addEventListener('keydown',event => {
         const key = event.key.toLowerCase();
         if (['arrowleft','arrowright','arrowup','arrowdown',' '].includes(key)) event.preventDefault();
